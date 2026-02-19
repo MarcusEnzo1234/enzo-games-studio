@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no"/>
+  <title>Gravity Flip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    html,body{height:100%;margin:0}
+    body{overflow:hidden;background:#070914;font-family:"Press Start 2P",system-ui;user-select:none;touch-action:manipulation}
+    canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+    .ui{position:fixed;inset:0;pointer-events:none;display:flex;justify-content:center;align-items:flex-start;padding:14px;color:#eaf2ff;text-shadow:2px 2px 0 rgba(0,0,0,.45)}
+    .row{width:min(980px,96vw);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .pill{padding:10px 12px;border:3px solid rgba(255,255,255,.18);background:rgba(255,255,255,.10);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.35);font-size:12px}
+    .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto;background:rgba(0,0,0,.18);backdrop-filter:blur(2px)}
+    .panel{width:min(860px,92vw);border:4px solid rgba(255,255,255,.22);background:rgba(10,14,30,.86);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.60);padding:18px;color:#eaf2ff;text-align:center}
+    .title{font-size:22px;margin:6px 0 12px}
+    .sub{font-size:12px;opacity:.85;line-height:1.6;margin:0 0 16px}
+    .btnRow{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+    button{font-family:"Press Start 2P";font-size:12px;padding:12px 14px;border-radius:14px;border:4px solid rgba(255,255,255,.22);background:#7df9ff;color:#081021;cursor:pointer;box-shadow:0 10px 0 rgba(0,0,0,.35)}
+    button.alt{background:#ffe680} button.danger{background:#ff5a78}
+    button:active{transform:translateY(6px);box-shadow:0 4px 0 rgba(0,0,0,.35)}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="ui">
+  <div class="row">
+    <div class="pill">SCORE: <span id="score">0</span></div>
+    <div class="pill">BEST: <span id="best">0</span></div>
+    <div class="pill">SPACE / TAP = FLIP</div>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="title">🔄 GRAVITY FLIP</div>
+    <div class="sub">Flip between floor and ceiling to dodge walls.</div>
+    <div class="btnRow">
+      <button id="start">START</button>
+      <button id="credits" class="alt">CREDITS</button>
+    </div>
+  </div>
+</div>
+
+<div id="creditScreen" class="screen hide">
+  <div class="panel">
+    <div class="title">CREDITS</div>
+    <div class="sub">GameMaker: <b>Enzo</b></div>
+    <div class="btnRow"><button id="back" class="alt">BACK</button></div>
+  </div>
+</div>
+
+<div id="over" class="screen hide">
+  <div class="panel">
+    <div class="title">GAME OVER</div>
+    <div class="sub">Tap / Space to retry</div>
+    <div class="btnRow">
+      <button id="retry" class="danger">RETRY</button>
+      <button id="menuBtn" class="alt">MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const c=document.getElementById("c"),ctx=c.getContext("2d");
+const scoreEl=document.getElementById("score"),bestEl=document.getElementById("best");
+const menu=document.getElementById("menu"),over=document.getElementById("over"),creditScreen=document.getElementById("creditScreen");
+
+function resize(){
+  const dpr=Math.max(1,Math.min(2,devicePixelRatio||1));
+  c.width=Math.floor(innerWidth*dpr); c.height=Math.floor(innerHeight*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize); resize();
+
+const AudioCtx=window.AudioContext||window.webkitAudioContext; const audio=new AudioCtx();
+function beep(f=880,d=0.08,type="square",v=0.05){
+  try{const o=audio.createOscillator(),g=audio.createGain();
+  o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g).connect(audio.destination);
+  o.start();g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+d);
+  o.stop(audio.currentTime+d+0.01);}catch{}
+}
+const sfx={flip:()=>beep(740,0.06,"square",0.05),hit:()=>beep(160,0.12,"sawtooth",0.06)};
+
+let best=+localStorage.getItem("gravityFlipBest")||0; bestEl.textContent=best;
+let state="menu",t=0,score=0;
+
+const world={speed:6.0, spawnEvery:70};
+const player={x:0,y:0,w:30,h:30,vy:0,grav:1}; // grav 1=down, -1=up
+const walls=[];
+const stars=Array.from({length:90},()=>({x:Math.random()*10000,y:Math.random()*1200,r:Math.random()*1.6+0.2,s:Math.random()*0.6+0.2}));
+
+function hideAll(){menu.classList.add("hide");over.classList.add("hide");creditScreen.classList.add("hide")}
+function showMenu(){hideAll();state="menu";menu.classList.remove("hide")}
+function showCredits(){hideAll();state="credits";creditScreen.classList.remove("hide")}
+function showOver(){
+  hideAll();state="over";over.classList.remove("hide");
+  if(score>best){best=score;localStorage.setItem("gravityFlipBest",String(best));bestEl.textContent=best;}
+}
+document.getElementById("start").onclick=()=>start();
+document.getElementById("retry").onclick=()=>start();
+document.getElementById("menuBtn").onclick=()=>showMenu();
+document.getElementById("credits").onclick=()=>showCredits();
+document.getElementById("back").onclick=()=>showMenu();
+
+function start(){
+  hideAll(); state="play";
+  t=0; score=0; scoreEl.textContent=score;
+  world.speed=Math.max(5.8, innerWidth/260);
+  world.spawnEvery=72;
+  walls.length=0;
+  player.x=Math.max(140, innerWidth*0.22);
+  player.grav=1; player.vy=0;
+  player.y=floorY()-player.h;
+}
+
+function floorY(){ return innerHeight*0.86; }
+function ceilY(){ return innerHeight*0.14; }
+
+function spawnWall(){
+  // make a wall that blocks either top or bottom, leaving a lane
+  const gapH = 120 + Math.random()*90;
+  const mid = (ceilY()+floorY())/2;
+  const gapY = mid + (Math.random()*2-1)*120;
+
+  const x = innerWidth + 80;
+  const w = 50 + Math.random()*30;
+  // two rectangles: top and bottom with a gap between
+  walls.push({x,w, gapY, gapH});
+}
+
+function rectHit(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+
+function flip(){
+  if(state==="menu"||state==="over"){ start(); return; }
+  if(state!=="play") return;
+  player.grav *= -1;
+  sfx.flip();
+}
+
+function update(){
+  t++;
+
+  if(state!=="play") return;
+
+  // difficulty
+  if(t%90===0) world.speed = Math.min(world.speed+0.2, 10.5);
+  if(t%120===0) world.spawnEvery = Math.max(48, world.spawnEvery-2);
+
+  if(t%world.spawnEvery===0) spawnWall();
+
+  // gravity physics
+  const g = 0.9;
+  player.vy += g * player.grav;
+  player.y += player.vy;
+
+  // clamp to floor/ceiling lanes
+  if(player.grav===1){
+    const fy=floorY()-player.h;
+    if(player.y>fy){ player.y=fy; player.vy=0; }
+  }else{
+    const cy=ceilY();
+    if(player.y<cy){ player.y=cy; player.vy=0; }
+  }
+
+  // move walls
+  for(let i=walls.length-1;i>=0;i--){
+    const wall=walls[i];
+    wall.x -= world.speed;
+
+    if(wall.x < -200){ walls.splice(i,1); continue; }
+
+    const px=player.x, py=player.y, pw=player.w, ph=player.h;
+
+    const topH = (wall.gapY - wall.gapH/2) - ceilY();
+    const botY = (wall.gapY + wall.gapH/2);
+    const botH = floorY() - botY;
+
+    // top block
+    if(topH>0 && rectHit(px,py,pw,ph, wall.x, ceilY(), wall.w, topH)){ die(); return; }
+    // bottom block
+    if(botH>0 && rectHit(px,py,pw,ph, wall.x, botY, wall.w, botH)){ die(); return; }
+
+    // scoring: pass wall when it goes behind player
+    if(!wall.passed && wall.x + wall.w < player.x){
+      wall.passed=true;
+      score++;
+      scoreEl.textContent=score;
+    }
+  }
+}
+
+function die(){ sfx.hit(); showOver(); }
+
+function drawBG(){
+  const w=innerWidth,h=innerHeight;
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,"#0b1030"); g.addColorStop(1,"#070914");
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+
+  ctx.save(); ctx.globalAlpha=0.18;
+  ctx.fillStyle="#7df9ff"; ctx.beginPath(); ctx.arc(w*0.2,h*0.2,180,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#c084fc"; ctx.beginPath(); ctx.arc(w*0.82,h*0.25,240,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  ctx.save(); ctx.globalAlpha=0.85;
+  for(const s of stars){
+    const x=(s.x - t*(0.9+s.s))%10000; const xx=(x+10000)%10000;
+    const px=(xx/10000)*w; const py=(s.y%(h*0.75))+20;
+    ctx.fillStyle="rgba(255,255,255,0.85)";
+    ctx.beginPath(); ctx.arc(px,py,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // lanes
+  ctx.save();
+  ctx.strokeStyle="rgba(180,120,255,0.75)";
+  ctx.lineWidth=3; ctx.shadowColor="rgba(180,120,255,1)"; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.moveTo(0,ceilY()); ctx.lineTo(w,ceilY()); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,floorY()); ctx.lineTo(w,floorY()); ctx.stroke();
+  ctx.restore();
+}
+
+function drawWalls(){
+  for(const wall of walls){
+    const topH = (wall.gapY - wall.gapH/2) - ceilY();
+    const botY = (wall.gapY + wall.gapH/2);
+    const botH = floorY() - botY;
+
+    ctx.save();
+    ctx.shadowColor="rgba(125,249,255,0.9)"; ctx.shadowBlur=16;
+    ctx.fillStyle="rgba(255,255,255,0.08)";
+    ctx.strokeStyle="#7df9ff"; ctx.lineWidth=3;
+
+    if(topH>0){ ctx.fillRect(wall.x, ceilY(), wall.w, topH); ctx.strokeRect(wall.x, ceilY(), wall.w, topH); }
+    if(botH>0){ ctx.fillRect(wall.x, botY, wall.w, botH); ctx.strokeRect(wall.x, botY, wall.w, botH); }
+
+    // danger edges
+    ctx.shadowBlur=0;
+    ctx.globalAlpha=0.25;
+    ctx.strokeStyle="#ff5a78";
+    ctx.strokeRect(wall.x, wall.gapY-wall.gapH/2, wall.w, wall.gapH);
+    ctx.restore();
+  }
+}
+
+function drawPlayer(){
+  ctx.save();
+  ctx.translate(player.x+player.w/2, player.y+player.h/2);
+  ctx.shadowColor="rgba(255,230,128,0.9)"; ctx.shadowBlur=16;
+  ctx.fillStyle="#ffe680";
+  ctx.fillRect(-player.w/2,-player.h/2,player.w,player.h);
+
+  ctx.shadowBlur=0;
+  ctx.globalAlpha=0.18;
+  ctx.fillStyle="#fff";
+  ctx.fillRect(-player.w/2+6,-player.h/2+6,player.w-12,player.h-12);
+  ctx.restore();
+}
+
+function render(){
+  ctx.clearRect(0,0,c.width,c.height);
+  drawBG(); drawWalls(); drawPlayer();
+}
+
+addEventListener("keydown",(e)=>{ if(e.code==="Space") flip(); });
+c.addEventListener("pointerdown", flip);
+
+function loop(){ update(); render(); requestAnimationFrame(loop); }
+showMenu(); loop();
+</script>
+</body>
+</html>
