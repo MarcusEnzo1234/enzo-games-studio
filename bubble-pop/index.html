@@ -1,0 +1,289 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no"/>
+  <title>Bubble Pop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    html,body{height:100%;margin:0}
+    body{overflow:hidden;background:#070914;font-family:"Press Start 2P",system-ui;user-select:none;touch-action:manipulation}
+    canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+    .ui{position:fixed;inset:0;pointer-events:none;display:flex;justify-content:center;align-items:flex-start;padding:14px;color:#eaf2ff;text-shadow:2px 2px 0 rgba(0,0,0,.45)}
+    .row{width:min(980px,96vw);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .pill{padding:10px 12px;border:3px solid rgba(255,255,255,.18);background:rgba(255,255,255,.10);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.35);font-size:12px}
+    .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto;background:rgba(0,0,0,.18);backdrop-filter:blur(2px)}
+    .panel{width:min(860px,92vw);border:4px solid rgba(255,255,255,.22);background:rgba(10,14,30,.86);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.60);padding:18px;color:#eaf2ff;text-align:center}
+    .title{font-size:22px;margin:6px 0 12px}
+    .sub{font-size:12px;opacity:.85;line-height:1.6;margin:0 0 16px}
+    .btnRow{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+    button{font-family:"Press Start 2P";font-size:12px;padding:12px 14px;border-radius:14px;border:4px solid rgba(255,255,255,.22);background:#7df9ff;color:#081021;cursor:pointer;box-shadow:0 10px 0 rgba(0,0,0,.35)}
+    button.alt{background:#ffe680} button.danger{background:#ff5a78}
+    button:active{transform:translateY(6px);box-shadow:0 4px 0 rgba(0,0,0,.35)}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="ui">
+  <div class="row">
+    <div class="pill">SCORE: <span id="score">0</span></div>
+    <div class="pill">COMBO: <span id="combo">0</span>x</div>
+    <div class="pill">TIME: <span id="time">30</span>s</div>
+    <div class="pill">BEST: <span id="best">0</span></div>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="title">🫧 BUBBLE POP</div>
+    <div class="sub">Click/tap bubbles before they vanish. Build combos for big points.</div>
+    <div class="btnRow">
+      <button id="start">START</button>
+      <button id="credits" class="alt">CREDITS</button>
+    </div>
+  </div>
+</div>
+
+<div id="creditScreen" class="screen hide">
+  <div class="panel">
+    <div class="title">CREDITS</div>
+    <div class="sub">GameMaker: <b>Enzo</b></div>
+    <div class="btnRow"><button id="back" class="alt">BACK</button></div>
+  </div>
+</div>
+
+<div id="over" class="screen hide">
+  <div class="panel">
+    <div class="title">TIME UP!</div>
+    <div class="sub">Tap / Space to retry</div>
+    <div class="btnRow">
+      <button id="retry" class="danger">RETRY</button>
+      <button id="menuBtn" class="alt">MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const c=document.getElementById("c"),ctx=c.getContext("2d");
+const scoreEl=document.getElementById("score");
+const comboEl=document.getElementById("combo");
+const timeEl=document.getElementById("time");
+const bestEl=document.getElementById("best");
+
+const menu=document.getElementById("menu");
+const over=document.getElementById("over");
+const creditScreen=document.getElementById("creditScreen");
+
+function resize(){
+  const dpr=Math.max(1,Math.min(2,devicePixelRatio||1));
+  c.width=Math.floor(innerWidth*dpr); c.height=Math.floor(innerHeight*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize); resize();
+
+let best=+localStorage.getItem("bubblePopBest")||0; bestEl.textContent=best;
+let state="menu";
+let t=0, score=0, combo=0, timeLeft=30;
+
+const bubbles=[];
+const pops=[];
+const stars=Array.from({length:80},()=>({x:Math.random()*10000,y:Math.random()*1200,r:Math.random()*1.6+0.2,s:Math.random()*0.6+0.2}));
+
+const AudioCtx=window.AudioContext||window.webkitAudioContext; const audio=new AudioCtx();
+function beep(f=880,d=0.08,type="square",v=0.05){
+  try{const o=audio.createOscillator(),g=audio.createGain();
+  o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g).connect(audio.destination);
+  o.start();g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+d);
+  o.stop(audio.currentTime+d+0.01);}catch{}
+}
+function popSfx(){ beep(980+Math.random()*180,0.05,"square",0.05); beep(1240+Math.random()*120,0.04,"square",0.035); }
+
+function hideAll(){ menu.classList.add("hide"); over.classList.add("hide"); creditScreen.classList.add("hide"); }
+function showMenu(){ hideAll(); state="menu"; menu.classList.remove("hide"); }
+function showCredits(){ hideAll(); state="credits"; creditScreen.classList.remove("hide"); }
+function showOver(){
+  hideAll(); state="over"; over.classList.remove("hide");
+  if(score>best){ best=score; localStorage.setItem("bubblePopBest",String(best)); bestEl.textContent=best; }
+}
+document.getElementById("start").onclick=()=>start();
+document.getElementById("retry").onclick=()=>start();
+document.getElementById("menuBtn").onclick=()=>showMenu();
+document.getElementById("credits").onclick=()=>showCredits();
+document.getElementById("back").onclick=()=>showMenu();
+
+function start(){
+  hideAll(); state="play";
+  t=0; score=0; combo=0; timeLeft=30;
+  bubbles.length=0; pops.length=0;
+  scoreEl.textContent=score; comboEl.textContent=combo; timeEl.textContent=timeLeft;
+}
+
+function spawnBubble(){
+  const r=18+Math.random()*26;
+  const x=40+Math.random()*(innerWidth-80);
+  const y=110+Math.random()*(innerHeight-220);
+  const life=120+Math.random()*70; // frames until vanish
+  const drift=(Math.random()*2-1)*0.6;
+  const colors=["#7df9ff","#ff5a78","#c084fc","#a3e635","#ffe680"];
+  const col=colors[Math.floor(Math.random()*colors.length)];
+  bubbles.push({x,y,r,life,max:life,dx:drift,col});
+}
+
+function addPop(x,y,col){
+  for(let i=0;i<12;i++){
+    pops.push({x,y,vx:(Math.random()*2-1)*2.2,vy:(Math.random()*2-1)*2.2,life:18+Math.random()*10,col});
+  }
+}
+
+function update(){
+  t++;
+
+  // background sparkle pops
+  for(let i=pops.length-1;i>=0;i--){
+    const p=pops[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.06;
+    p.vx*=0.94; p.vy*=0.94;
+    p.life--;
+    if(p.life<=0) pops.splice(i,1);
+  }
+
+  if(state!=="play") return;
+
+  // timer
+  if(t%60===0){
+    timeLeft--;
+    timeEl.textContent=timeLeft;
+    if(timeLeft<=0){ showOver(); return; }
+  }
+
+  // spawns ramp up
+  const spawnEvery=Math.max(10, Math.floor(26 - (30-timeLeft)*0.4));
+  if(t%spawnEvery===0) spawnBubble();
+
+  // bubble life
+  for(let i=bubbles.length-1;i>=0;i--){
+    const b=bubbles[i];
+    b.life--;
+    b.x+=b.dx;
+    if(b.x<b.r+10 || b.x>innerWidth-b.r-10) b.dx*=-1;
+
+    if(b.life<=0){
+      bubbles.splice(i,1);
+      combo=0; comboEl.textContent=combo;
+    }
+  }
+}
+
+function drawBG(){
+  const w=innerWidth,h=innerHeight;
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,"#0b1030"); g.addColorStop(1,"#070914");
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+
+  ctx.save(); ctx.globalAlpha=0.18;
+  ctx.fillStyle="#7df9ff"; ctx.beginPath(); ctx.arc(w*0.2,h*0.2,180,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#c084fc"; ctx.beginPath(); ctx.arc(w*0.82,h*0.25,240,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  ctx.save(); ctx.globalAlpha=0.85;
+  for(const s of stars){
+    const x=(s.x - t*(0.9+s.s))%10000; const xx=(x+10000)%10000;
+    const px=(xx/10000)*w; const py=(s.y%(h*0.75))+20;
+    ctx.fillStyle="rgba(255,255,255,0.85)";
+    ctx.beginPath(); ctx.arc(px,py,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBubble(b){
+  const a=Math.max(0, b.life/b.max);
+  ctx.save();
+  ctx.translate(b.x,b.y);
+  ctx.shadowColor=b.col; ctx.shadowBlur=18;
+  ctx.globalAlpha=0.95;
+
+  // bubble body
+  ctx.fillStyle="rgba(255,255,255,0.10)";
+  ctx.strokeStyle=b.col; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+  // inner shine
+  ctx.shadowBlur=0;
+  ctx.globalAlpha=0.35*a;
+  ctx.fillStyle="#fff";
+  ctx.beginPath(); ctx.arc(-b.r*0.25,-b.r*0.25,b.r*0.35,0,Math.PI*2); ctx.fill();
+
+  // vanish ring
+  ctx.globalAlpha=0.35;
+  ctx.strokeStyle="rgba(255,255,255,0.35)";
+  ctx.beginPath(); ctx.arc(0,0,b.r*(1.3-a*0.2),0,Math.PI*2); ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawPops(){
+  for(const p of pops){
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,p.life/26);
+    ctx.fillStyle="rgba(255,255,255,0.9)";
+    ctx.fillRect(p.x,p.y,2,2);
+    ctx.restore();
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,c.width,c.height);
+  drawBG();
+  for(const b of bubbles) drawBubble(b);
+  drawPops();
+}
+
+function hitTest(mx,my,b){
+  const dx=mx-b.x, dy=my-b.y;
+  return (dx*dx+dy*dy) <= b.r*b.r;
+}
+
+function clickAt(clientX, clientY){
+  if(state==="menu" || state==="over"){ start(); return; }
+  if(state!=="play") return;
+
+  const rect=c.getBoundingClientRect();
+  const mx=(clientX-rect.left)*(c.width/rect.width);
+  const my=(clientY-rect.top)*(c.height/rect.height);
+
+  // find topmost bubble hit
+  for(let i=bubbles.length-1;i>=0;i--){
+    const b=bubbles[i];
+    if(hitTest(mx,my,b)){
+      bubbles.splice(i,1);
+      combo++;
+      comboEl.textContent=combo;
+
+      const points = Math.max(1, Math.floor(28/b.r)) + Math.floor(combo/5);
+      score += points;
+      scoreEl.textContent=score;
+
+      popSfx();
+      addPop(b.x,b.y,b.col);
+      return;
+    }
+  }
+
+  // miss resets combo
+  combo=0; comboEl.textContent=combo;
+}
+
+c.addEventListener("pointerdown",(e)=>clickAt(e.clientX,e.clientY));
+addEventListener("keydown",(e)=>{ if(e.code==="Space" && state!=="play") start(); });
+
+setInterval(()=>{ if(state==="play"){} },1000);
+
+function loop(){ update(); render(); requestAnimationFrame(loop); }
+showMenu(); loop();
+</script>
+</body>
+</html>
