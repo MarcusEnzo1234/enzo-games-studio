@@ -7,216 +7,360 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      --bg1:#060816;
-      --bg2:#0b1030;
-      --card: rgba(255,255,255,.08);
-      --stroke: rgba(255,255,255,.14);
-      --text:#eaf2ff;
-      --muted: rgba(234,242,255,.7);
-      --glow: rgba(125,249,255,.35);
-      --accent:#7df9ff;
-      --accent2:#ff5a78;
-      --accent3:#ffe680;
+      --bg:#ffffff;
+      --ink:#111;
+      --muted:#555;
+      --card:#fff;
+      --border:#222;
+      --shadow: 0 10px 0 rgba(0,0,0,.12);
+      --radius:18px;
     }
-    *{ box-sizing:border-box; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
-      min-height:100vh;
-      color:var(--text);
-      font-family:"Press Start 2P", system-ui, Arial;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(125,249,255,.18), transparent 40%),
-        radial-gradient(circle at 80% 15%, rgba(192,132,252,.18), transparent 45%),
-        radial-gradient(circle at 55% 0%, rgba(255,90,120,.12), transparent 40%),
-        linear-gradient(180deg, var(--bg2), var(--bg1));
-      overflow-x:hidden;
-    }
-    .wrap{
-      width:min(1100px, 92vw);
-      margin: 0 auto;
-      padding: 26px 0 60px;
+      background:var(--bg);
+      color:var(--ink);
+      font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
     header{
+      padding:32px 18px 10px;
+      text-align:center;
+      position:relative;
+    }
+    .logo{
+      font-family:"Press Start 2P", system-ui;
+      letter-spacing:1px;
+      font-size:34px;
+      margin:0;
+      line-height:1.15;
+    }
+    .sub{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-weight:800;
+      font-size:16px;
+    }
+    .topRight{
+      position:absolute;
+      right:18px;
+      top:18px;
       display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:14px;
-      padding: 10px 6px 22px;
-    }
-    .title{
-      font-size: 26px;
-      letter-spacing: 1px;
-      text-shadow: 0 0 22px var(--glow);
-    }
-    .tagline{
-      margin-top:10px;
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.6;
-      max-width: 560px;
-    }
-    .pill{
-      display:inline-flex;
       gap:10px;
       align-items:center;
-      padding: 10px 12px;
-      border: 3px solid var(--stroke);
-      background: rgba(255,255,255,.06);
-      border-radius: 14px;
-      box-shadow: 0 12px 34px rgba(0,0,0,.35);
-      font-size: 10px;
-      color: var(--muted);
-      white-space:nowrap;
+      flex-wrap:wrap;
     }
-
+    .pillBtn{
+      border:2.5px solid var(--border);
+      background:#fff;
+      border-radius:999px;
+      padding:10px 12px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,.10);
+    }
+    .pillBtn:active{transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.10)}
+    .wrap{
+      width:min(1100px, 92vw);
+      margin: 0 auto 60px;
+    }
     .grid{
       display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(3, 1fr);
+      gap:18px;
+      padding:16px 0 0;
     }
-    @media (max-width: 920px){ .grid{ grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 560px){ .grid{ grid-template-columns: 1fr; } }
+    @media (max-width: 980px){
+      .grid{grid-template-columns: repeat(2, 1fr)}
+      .logo{font-size:28px}
+    }
+    @media (max-width: 620px){
+      .grid{grid-template-columns: 1fr}
+      .topRight{position:static; justify-content:center; margin-top:14px}
+    }
 
     a.card{
       display:block;
       text-decoration:none;
       color:inherit;
-      border-radius: 18px;
-      border: 3px solid var(--stroke);
-      background: var(--card);
-      box-shadow: 0 18px 55px rgba(0,0,0,.42);
-      padding: 14px;
-      position:relative;
+      background:var(--card);
+      border:3px solid var(--border);
+      border-radius:var(--radius);
       overflow:hidden;
-      transition: transform .12s ease, filter .12s ease;
+      box-shadow: var(--shadow);
+      transition: transform .08s ease;
     }
-    a.card:hover{
-      transform: translateY(-2px);
-      filter: brightness(1.05);
-    }
-    .card::before{
-      content:"";
-      position:absolute;
-      inset:-30%;
-      background: radial-gradient(circle at top left, rgba(125,249,255,.16), transparent 45%),
-                  radial-gradient(circle at bottom right, rgba(255,90,120,.12), transparent 45%);
-      transform: rotate(12deg);
-      pointer-events:none;
-    }
-    .cardTop{
+    a.card:hover{transform: translateY(-2px)}
+    a.card:active{transform: translateY(6px); box-shadow: 0 4px 0 rgba(0,0,0,.12)}
+    .thumb{
+      height:140px;
       display:flex;
-      justify-content:space-between;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+    .thumb .emoji{
+      font-size:44px;
+      position:absolute;
+      right:16px; top:12px;
+      filter: drop-shadow(0 3px 0 rgba(0,0,0,.15));
+    }
+    .thumb .big{
+      font-family:"Press Start 2P";
+      font-size:24px;
+      text-align:center;
+      padding:0 14px;
+      line-height:1.25;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.12);
+    }
+    .meta{
+      padding:12px 14px 14px;
+      border-top:3px solid var(--border);
+      display:flex;
+      gap:10px;
       align-items:flex-start;
-      gap:12px;
-      position:relative;
-      z-index:1;
+      justify-content:space-between;
     }
-    .name{ font-size: 14px; line-height: 1.4; }
-    .desc{
-      margin-top:10px;
-      font-size: 10px;
-      line-height: 1.7;
-      color: var(--muted);
-      position:relative;
-      z-index:1;
-      min-height: 46px;
+    .meta h3{
+      margin:0;
+      font-size:18px;
+      font-weight:900;
     }
-    .badge{
-      font-size:10px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 3px solid rgba(255,255,255,.16);
-      background: rgba(0,0,0,.18);
-      color: rgba(234,242,255,.85);
+    .meta p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-weight:800;
+      font-size:13px;
+      line-height:1.25;
     }
-    .badge.new{ border-color: rgba(125,249,255,.26); box-shadow: 0 0 18px rgba(125,249,255,.18); }
-    .badge.fun{ border-color: rgba(255,230,128,.28); box-shadow: 0 0 18px rgba(255,230,128,.16); }
-    .badge.arc{ border-color: rgba(255,90,120,.26); box-shadow: 0 0 18px rgba(255,90,120,.14); }
+    .tag{
+      flex:0 0 auto;
+      border:2px solid var(--border);
+      border-radius:999px;
+      padding:7px 10px;
+      font-weight:900;
+      font-size:12px;
+      background:#fff;
+      white-space:nowrap;
+      box-shadow: 0 6px 0 rgba(0,0,0,.10);
+    }
 
-    footer{
-      margin-top: 22px;
-      padding: 18px 6px 0;
-      color: var(--muted);
-      font-size: 10px;
-      line-height: 1.8;
+    /* fun doodles */
+    .doodle{
+      position:fixed;
+      pointer-events:none;
+      opacity:.9;
+      filter: drop-shadow(0 6px 0 rgba(0,0,0,.12));
     }
-    .smallLinks a{ color: var(--accent); text-decoration:none; }
-    .smallLinks a:hover{ text-decoration:underline; }
+    .d1{right:26px; top:120px; transform: rotate(6deg); font-size:44px;}
+    .d2{left:26px; top:170px; transform: rotate(-8deg); font-size:42px;}
+    .d3{right:32px; bottom:18px; transform: rotate(-6deg); font-size:40px;}
+
+    /* modal */
+    .modalBack{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.35);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .modal{
+      width:min(760px, 96vw);
+      background:#fff;
+      border:3px solid var(--border);
+      border-radius:18px;
+      box-shadow: 0 14px 0 rgba(0,0,0,.12);
+      padding:16px;
+    }
+    .modal h2{margin:0 0 10px; font-size:22px}
+    .modal p{margin:0 0 14px; color:var(--muted); font-weight:800}
+    .modal .row2{display:flex; gap:10px; flex-wrap:wrap}
+    .closeBtn{background:#fff}
+    .show{display:flex}
+    .kbd{
+      font-family:"Press Start 2P";
+      font-size:11px;
+      border:2px solid var(--border);
+      border-radius:10px;
+      padding:6px 8px;
+      display:inline-block;
+      background:#fff;
+      box-shadow:0 6px 0 rgba(0,0,0,.10);
+    }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <header>
-      <div>
-        <div class="title">Enzo.Fun</div>
-        <div class="tagline">
-          A neon arcade playground of mini-games made by Enzo.
-          Click a card to play instantly.
-        </div>
-      </div>
-      <div class="pill">GameMaker: <b style="color:var(--text)">Enzo</b></div>
-    </header>
+  <div class="doodle d1">🪴</div>
+  <div class="doodle d2">🎮</div>
+  <div class="doodle d3">✨</div>
 
-    <div class="grid">
-      <a class="card" href="./neon-drift/">
-        <div class="cardTop">
-          <div class="name">🚀 Neon Drift</div>
-          <div class="badge arc">Arcade</div>
-        </div>
-        <div class="desc">Dodge neon asteroids. Near-miss for bonus points. Simple, fast, addicting.</div>
-      </a>
-
-      <a class="card" href="./rocket-tap/">
-        <div class="cardTop">
-          <div class="name">🚀 Rocket Tap</div>
-          <div class="badge arc">Arcade</div>
-        </div>
-        <div class="desc">Flappy-style rocket. Tap to fly. Survive as long as you can.</div>
-      </a>
-
-      <a class="card" href="./arena-slash/">
-        <div class="cardTop">
-          <div class="name">⚔️ Arena Slash</div>
-          <div class="badge arc">Arcade</div>
-        </div>
-        <div class="desc">Click/Space to slash. Enemies rush you with different outfits. Clear waves.</div>
-      </a>
-
-      <a class="card" href="./target-frenzy/">
-        <div class="cardTop">
-          <div class="name">🎯 Target Frenzy</div>
-          <div class="badge fun">Skill</div>
-        </div>
-        <div class="desc">Click targets before time runs out. Smaller targets = more points + satisfying hits.</div>
-      </a>
-
-      <a class="card" href="./coinrush.html">
-        <div class="cardTop">
-          <div class="name">🪙 Coin Rush</div>
-          <div class="badge fun">Skill</div>
-        </div>
-        <div class="desc">Collect coins as fast as possible before time ends. Neon night theme.</div>
-      </a>
-
-      <a class="card" href="./password-challenge/">
-        <div class="cardTop">
-          <div class="name">🔐 Enzo Password Challenge</div>
-          <div class="badge new">New</div>
-        </div>
-        <div class="desc">Make a password that survives weird rules. It’s chaotic and funny (original).</div>
-      </a>
+  <header>
+    <div class="topRight">
+      <button class="pillBtn" id="creditsBtn">Credits</button>
+      <button class="pillBtn" id="howBtn">How to add a game</button>
     </div>
 
-    <footer>
-      Tip: if a game link shows 404, it means the folder/file name in GitHub doesn’t match the link.
-      <div class="smallLinks" style="margin-top:10px;">
-        Want more games added? Tell me the next theme: <a href="javascript:void(0)">neon</a> / <a href="javascript:void(0)">sky</a> / <a href="javascript:void(0)">retro</a>.
+    <h1 class="logo">ENZO.FUN</h1>
+    <p class="sub">games and stuff by Enzo</p>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+
+      <!-- EDIT THESE LINKS if your folder names are different -->
+      <a class="card" href="./bubble-pop/" aria-label="Bubble Pop">
+        <div class="thumb" style="background:linear-gradient(135deg,#7df9ff,#c084fc);">
+          <div class="big">BUBBLE<br>POP</div>
+          <div class="emoji">🫧</div>
+        </div>
+        <div class="meta">
+          <div>
+            <h3>Bubble Pop</h3>
+            <p>Pop bubbles fast. Combos = bonus.</p>
+          </div>
+          <div class="tag">Tap</div>
+        </div>
+      </a>
+
+      <a class="card" href="./gravity-flip/" aria-label="Gravity Flip">
+        <div class="thumb" style="background:linear-gradient(135deg,#ffe680,#7df9ff);">
+          <div class="big">GRAVITY<br>FLIP</div>
+          <div class="emoji">🔄</div>
+        </div>
+        <div class="meta">
+          <div>
+            <h3>Gravity Flip</h3>
+            <p>Flip gravity to dodge walls.</p>
+          </div>
+          <div class="tag">Space</div>
+        </div>
+      </a>
+
+      <a class="card" href="./crystal-catch/" aria-label="Crystal Catch">
+        <div class="thumb" style="background:linear-gradient(135deg,#a3e635,#7df9ff);">
+          <div class="big">CRYSTAL<br>CATCH</div>
+          <div class="emoji">💎</div>
+        </div>
+        <div class="meta">
+          <div>
+            <h3>Crystal Catch</h3>
+            <p>Catch gems. Avoid bombs.</p>
+          </div>
+          <div class="tag">Arcade</div>
+        </div>
+      </a>
+
+      <a class="card" href="./neon-breaker/" aria-label="Neon Breaker">
+        <div class="thumb" style="background:linear-gradient(135deg,#ff5a78,#ffe680);">
+          <div class="big">NEON<br>BREAKER</div>
+          <div class="emoji">🧱</div>
+        </div>
+        <div class="meta">
+          <div>
+            <h3>Neon Breaker</h3>
+            <p>Break bricks. Grab powerups.</p>
+          </div>
+          <div class="tag">Classic</div>
+        </div>
+      </a>
+
+      <a class="card" href="./meteor-slice/" aria-label="Meteor Slice">
+        <div class="thumb" style="background:linear-gradient(135deg,#c084fc,#7df9ff);">
+          <div class="big">METEOR<br>SLICE</div>
+          <div class="emoji">☄️</div>
+        </div>
+        <div class="meta">
+          <div>
+            <h3>Meteor Slice</h3>
+            <p>Click meteors before they land.</p>
+          </div>
+          <div class="tag">Click</div>
+        </div>
+      </a>
+
+      <a class="card" href="./lane-switch/" aria-label="Lane Switch">
+        <div class="thumb" style="background:linear-gradient(135deg,#7df9ff,#ffe680);">
+          <div class="big">LANE<br>SWITCH</div>
+          <div class="emoji">🛣️</div>
+        </div>
+        <div class="meta">
+          <div>
+            <h3>Lane Switch</h3>
+            <p>3-lane dodge + coins.</p>
+          </div>
+          <div class="tag">Runner</div>
+        </div>
+      </a>
+
+      <!-- If you have Coin Rush / Rocket Tap etc, just copy a card and change href + text -->
+
+    </div>
+  </main>
+
+  <!-- Credits Modal -->
+  <div class="modalBack" id="creditsModal">
+    <div class="modal">
+      <h2>Credits</h2>
+      <p><b>GameMaker: Enzo</b> 🕹️</p>
+      <div class="row2">
+        <button class="pillBtn closeBtn" data-close>Close</button>
       </div>
-    </footer>
+    </div>
   </div>
+
+  <!-- How-to Modal -->
+  <div class="modalBack" id="howModal">
+    <div class="modal">
+      <h2>How to add a new game</h2>
+      <p>
+        1) Make a folder in your repo, example: <span class="kbd">my-new-game</span><br><br>
+        2) Inside it, create <span class="kbd">index.html</span><br><br>
+        3) Add a new card on this homepage:
+        copy any card block and change the <span class="kbd">href</span> to <span class="kbd">./my-new-game/</span>
+      </p>
+      <div class="row2">
+        <button class="pillBtn closeBtn" data-close>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const creditsBtn = document.getElementById("creditsBtn");
+    const howBtn = document.getElementById("howBtn");
+    const creditsModal = document.getElementById("creditsModal");
+    const howModal = document.getElementById("howModal");
+
+    function openModal(m){ m.classList.add("show"); }
+    function closeModal(m){ m.classList.remove("show"); }
+
+    creditsBtn.addEventListener("click", ()=>openModal(creditsModal));
+    howBtn.addEventListener("click", ()=>openModal(howModal));
+
+    document.querySelectorAll("[data-close]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        closeModal(creditsModal);
+        closeModal(howModal);
+      });
+    });
+
+    [creditsModal, howModal].forEach(m=>{
+      m.addEventListener("click",(e)=>{
+        if(e.target===m) closeModal(m);
+      });
+    });
+
+    // ESC closes
+    window.addEventListener("keydown",(e)=>{
+      if(e.key==="Escape"){
+        closeModal(creditsModal);
+        closeModal(howModal);
+      }
+    });
+  </script>
 </body>
 </html>
