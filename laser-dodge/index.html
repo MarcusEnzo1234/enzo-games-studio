@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no" />
+  <title>Laser Dodge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    html,body{height:100%;margin:0}
+    body{overflow:hidden;background:#070914;font-family:"Press Start 2P",system-ui;user-select:none;touch-action:manipulation}
+    canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+    .ui{position:fixed;inset:0;pointer-events:none;display:flex;justify-content:center;align-items:flex-start;padding:14px;color:#eaf2ff;text-shadow:2px 2px 0 rgba(0,0,0,.45)}
+    .row{width:min(980px,96vw);display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .pill{padding:10px 12px;border:3px solid rgba(255,255,255,.18);background:rgba(255,255,255,.10);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.35);font-size:12px}
+    .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto;background:rgba(0,0,0,.18);backdrop-filter:blur(2px)}
+    .panel{width:min(860px,92vw);border:4px solid rgba(255,255,255,.22);background:rgba(10,14,30,.86);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.60);padding:18px;color:#eaf2ff;text-align:center}
+    .title{font-size:22px;margin:6px 0 12px}
+    .sub{font-size:12px;opacity:.85;line-height:1.6;margin:0 0 16px}
+    .btnRow{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+    button{font-family:"Press Start 2P";font-size:12px;padding:12px 14px;border-radius:14px;border:4px solid rgba(255,255,255,.22);background:#7df9ff;color:#081021;cursor:pointer;box-shadow:0 10px 0 rgba(0,0,0,.35)}
+    button.alt{background:#ffe680} button.danger{background:#ff5a78}
+    button:active{transform:translateY(6px);box-shadow:0 4px 0 rgba(0,0,0,.35)}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="ui">
+  <div class="row">
+    <div class="pill">TIME: <span id="time">0</span>s</div>
+    <div class="pill">BEST: <span id="best">0</span>s</div>
+    <div class="pill">A/D ←/→ MOVE • SPACE DASH</div>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div class="title">⚡ LASER DODGE</div>
+    <div class="sub">Survive the neon laser rain. Near-miss = bonus glow.</div>
+    <div class="btnRow">
+      <button id="start">START</button>
+      <button id="credits" class="alt">CREDITS</button>
+    </div>
+  </div>
+</div>
+
+<div id="creditScreen" class="screen hide">
+  <div class="panel">
+    <div class="title">CREDITS</div>
+    <div class="sub">GameMaker: <b>Enzo</b></div>
+    <div class="btnRow"><button id="back" class="alt">BACK</button></div>
+  </div>
+</div>
+
+<div id="over" class="screen hide">
+  <div class="panel">
+    <div class="title">GAME OVER</div>
+    <div class="sub">Tap / Space to retry</div>
+    <div class="btnRow">
+      <button id="retry" class="danger">RETRY</button>
+      <button id="menuBtn" class="alt">MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById("c"),ctx=canvas.getContext("2d");
+const timeEl=document.getElementById("time"),bestEl=document.getElementById("best");
+const menu=document.getElementById("menu"),over=document.getElementById("over");
+const creditScreen=document.getElementById("creditScreen");
+
+function resize(){const dpr=Math.max(1,Math.min(2,devicePixelRatio||1));canvas.width=innerWidth*dpr;canvas.height=innerHeight*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener("resize",resize);resize();
+
+let best=+localStorage.getItem("laserDodgeBest")||0;bestEl.textContent=best;
+
+let state="menu",t=0,aliveTime=0;
+const keys={l:false,r:false};
+const player={x:0,y:0,w:46,h:18,vx:0,dash:0,inv:0};
+const lasers=[];
+const stars=Array.from({length:90},()=>({x:Math.random()*10000,y:Math.random()*1200,r:Math.random()*1.6+0.2,s:Math.random()*0.6+0.2}));
+
+const AudioCtx=window.AudioContext||window.webkitAudioContext;const audio=new AudioCtx();
+function beep(f=880,d=0.08,type="square",v=0.05){
+  try{const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g).connect(audio.destination);o.start();
+  g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+d);o.stop(audio.currentTime+d+0.01);}catch{}
+}
+const sfx={dash:()=>{beep(520,0.06,"square",0.05);beep(740,0.05,"square",0.04)},hit:()=>beep(160,0.12,"sawtooth",0.06)};
+
+function hideAll(){menu.classList.add("hide");over.classList.add("hide");creditScreen.classList.add("hide")}
+function showMenu(){hideAll();state="menu";menu.classList.remove("hide")}
+function showOver(){hideAll();state="over";over.classList.remove("hide")}
+function showCredits(){hideAll();state="credits";creditScreen.classList.remove("hide")}
+
+document.getElementById("start").onclick=()=>start();
+document.getElementById("retry").onclick=()=>start();
+document.getElementById("menuBtn").onclick=()=>showMenu();
+document.getElementById("credits").onclick=()=>showCredits();
+document.getElementById("back").onclick=()=>showMenu();
+
+function start(){
+  hideAll(); state="play";
+  t=0; aliveTime=0; timeEl.textContent="0";
+  player.x=innerWidth*0.5; player.y=innerHeight*0.8; player.vx=0; player.dash=0; player.inv=0;
+  lasers.length=0;
+}
+function spawnLaser(){
+  const w=18+Math.random()*36;
+  const x=40+Math.random()*(innerWidth-80);
+  const speed=6+Math.random()*4 + aliveTime*0.02;
+  const c=["#7df9ff","#ff5a78","#c084fc","#a3e635","#ffe680"][Math.floor(Math.random()*5)];
+  lasers.push({x,y:-40,w,h:innerHeight*0.35+Math.random()*innerHeight*0.25,vy:speed,c,hit:false});
+}
+
+function rectHit(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by}
+
+function update(){
+  t++;
+
+  if(state!=="play") return;
+
+  aliveTime+=1/60;
+  timeEl.textContent=Math.floor(aliveTime);
+
+  // difficulty spawns
+  const spawnEvery=Math.max(18, Math.floor(40 - aliveTime*0.25));
+  if(t%spawnEvery===0) spawnLaser();
+
+  // movement
+  const accel=0.65, maxV=9.5;
+  if(keys.l) player.vx-=accel;
+  if(keys.r) player.vx+=accel;
+  player.vx*=0.86;
+
+  if(player.dash>0){ player.dash*=0.88; player.vx*=1.06; }
+  player.vx=Math.max(-maxV,Math.min(maxV,player.vx));
+  player.x+=player.vx;
+  player.x=Math.max(20,Math.min(innerWidth-20,player.x));
+  if(player.inv>0) player.inv--;
+
+  // lasers move + collision
+  for(let i=lasers.length-1;i>=0;i--){
+    const L=lasers[i];
+    L.y+=L.vy;
+    if(L.y>innerHeight+200){ lasers.splice(i,1); continue; }
+
+    const bx=L.x-L.w/2, by=L.y, bw=L.w, bh=L.h;
+    const px=player.x-player.w/2, py=player.y-player.h/2;
+
+    if(player.inv===0 && rectHit(px,py,player.w,player.h,bx,by,bw,bh)){
+      sfx.hit();
+      end();
+      return;
+    }
+  }
+}
+function end(){
+  const s=Math.floor(aliveTime);
+  if(s>best){best=s;localStorage.setItem("laserDodgeBest",String(best));bestEl.textContent=best;}
+  showOver();
+}
+
+function drawBG(){
+  const w=innerWidth,h=innerHeight;
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,"#0b1030"); g.addColorStop(1,"#070914");
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+
+  // haze
+  ctx.save(); ctx.globalAlpha=0.18;
+  ctx.fillStyle="#7df9ff"; ctx.beginPath(); ctx.arc(w*0.2,h*0.2,180,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#c084fc"; ctx.beginPath(); ctx.arc(w*0.8,h*0.25,240,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // stars
+  ctx.save(); ctx.globalAlpha=0.8;
+  for(const s of stars){
+    const x=(s.x - t*(1.0+s.s))%10000; const xx=(x+10000)%10000;
+    const px=(xx/10000)*w; const py=(s.y%(h*0.72))+20;
+    ctx.fillStyle="rgba(255,255,255,0.85)";
+    ctx.beginPath(); ctx.arc(px,py,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // ground line
+  const gy=h*0.86;
+  ctx.save();
+  ctx.strokeStyle="rgba(180,120,255,0.75)";
+  ctx.lineWidth=3; ctx.shadowColor="rgba(180,120,255,1)"; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke();
+  ctx.restore();
+}
+function drawPlayer(){
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.shadowColor="rgba(125,249,255,0.9)";
+  ctx.shadowBlur=16;
+
+  // ship
+  ctx.fillStyle="#eaf2ff";
+  ctx.beginPath();
+  ctx.moveTo(26,0);
+  ctx.lineTo(-18,-10);
+  ctx.lineTo(-8,0);
+  ctx.lineTo(-18,10);
+  ctx.closePath();
+  ctx.fill();
+
+  // cockpit
+  ctx.shadowBlur=0;
+  ctx.fillStyle="#7df9ff";
+  ctx.beginPath(); ctx.arc(-2,0,5,0,Math.PI*2); ctx.fill();
+
+  // inv flash
+  if(player.inv>0){
+    ctx.globalAlpha=0.35;
+    ctx.fillStyle="#ff5a78";
+    ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+function drawLasers(){
+  for(const L of lasers){
+    const bx=L.x-L.w/2, by=L.y, bw=L.w, bh=L.h;
+    ctx.save();
+    ctx.shadowColor=L.c; ctx.shadowBlur=18;
+    ctx.fillStyle="rgba(255,255,255,0.10)";
+    ctx.strokeStyle=L.c; ctx.lineWidth=3;
+    ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeRect(bx,by,bw,bh);
+    ctx.restore();
+  }
+}
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawBG();
+  drawLasers();
+  drawPlayer();
+}
+function loop(){ update(); render(); requestAnimationFrame(loop); }
+loop();
+
+addEventListener("keydown",(e)=>{
+  if(e.code==="ArrowLeft"||e.code==="KeyA") keys.l=true;
+  if(e.code==="ArrowRight"||e.code==="KeyD") keys.r=true;
+  if(e.code==="Space"){
+    if(state==="menu"||state==="over") start();
+    if(state==="play"){ player.dash=1; player.inv=10; sfx.dash(); }
+  }
+});
+addEventListener("keyup",(e)=>{
+  if(e.code==="ArrowLeft"||e.code==="KeyA") keys.l=false;
+  if(e.code==="ArrowRight"||e.code==="KeyD") keys.r=false;
+});
+canvas.addEventListener("pointerdown",()=>{
+  if(state==="menu"||state==="over"){ start(); return; }
+  if(state==="play"){ player.dash=1; player.inv=10; sfx.dash(); }
+});
+</script>
+</body>
+</html>
