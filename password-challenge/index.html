@@ -1,1 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Enzo.Fun</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg1:#060816;
+      --bg2:#0b1030;
+      --card: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.14);
+      --text:#eaf2ff;
+      --muted: rgba(234,242,255,.7);
+      --glow: rgba(125,249,255,.35);
+      --accent:#7df9ff;
+      --accent2:#ff5a78;
+      --accent3:#ffe680;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      font-family:"Press Start 2P", system-ui, Arial;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(125,249,255,.18), transparent 40%),
+        radial-gradient(circle at 80% 15%, rgba(192,132,252,.18), transparent 45%),
+        radial-gradient(circle at 55% 0%, rgba(255,90,120,.12), transparent 40%),
+        linear-gradient(180deg, var(--bg2), var(--bg1));
+      overflow-x:hidden;
+    }
+    .wrap{
+      width:min(1100px, 92vw);
+      margin: 0 auto;
+      padding: 26px 0 60px;
+    }
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      padding: 10px 6px 22px;
+    }
+    .title{
+      font-size: 26px;
+      letter-spacing: 1px;
+      text-shadow: 0 0 22px var(--glow);
+    }
+    .tagline{
+      margin-top:10px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 560px;
+    }
+    .pill{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding: 10px 12px;
+      border: 3px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      border-radius: 14px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.35);
+      font-size: 10px;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 920px){ .grid{ grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px){ .grid{ grid-template-columns: 1fr; } }
+
+    a.card{
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      border-radius: 18px;
+      border: 3px solid var(--stroke);
+      background: var(--card);
+      box-shadow: 0 18px 55px rgba(0,0,0,.42);
+      padding: 14px;
+      position:relative;
+      overflow:hidden;
+      transition: transform .12s ease, filter .12s ease;
+    }
+    a.card:hover{
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-30%;
+      background: radial-gradient(circle at top left, rgba(125,249,255,.16), transparent 45%),
+                  radial-gradient(circle at bottom right, rgba(255,90,120,.12), transparent 45%);
+      transform: rotate(12deg);
+      pointer-events:none;
+    }
+    .cardTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      position:relative;
+      z-index:1;
+    }
+    .name{ font-size: 14px; line-height: 1.4; }
+    .desc{
+      margin-top:10px;
+      font-size: 10px;
+      line-height: 1.7;
+      color: var(--muted);
+      position:relative;
+      z-index:1;
+      min-height: 46px;
+    }
+    .badge{
+      font-size:10px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 3px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      color: rgba(234,242,255,.85);
+    }
+    .badge.new{ border-color: rgba(125,249,255,.26); box-shadow: 0 0 18px rgba(125,249,255,.18); }
+    .badge.fun{ border-color: rgba(255,230,128,.28); box-shadow: 0 0 18px rgba(255,230,128,.16); }
+    .badge.arc{ border-color: rgba(255,90,120,.26); box-shadow: 0 0 18px rgba(255,90,120,.14); }
+
+    footer{
+      margin-top: 22px;
+      padding: 18px 6px 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.8;
+    }
+    .smallLinks a{ color: var(--accent); text-decoration:none; }
+    .smallLinks a:hover{ text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <div class="title">Enzo.Fun</div>
+        <div class="tagline">
+          A neon arcade playground of mini-games made by Enzo.
+          Click a card to play instantly.
+        </div>
+      </div>
+      <div class="pill">GameMaker: <b style="color:var(--text)">Enzo</b></div>
+    </header>
+
+    <div class="grid">
+      <a class="card" href="./neon-drift/">
+        <div class="cardTop">
+          <div class="name">🚀 Neon Drift</div>
+          <div class="badge arc">Arcade</div>
+        </div>
+        <div class="desc">Dodge neon asteroids. Near-miss for bonus points. Simple, fast, addicting.</div>
+      </a>
+
+      <a class="card" href="./rocket-tap/">
+        <div class="cardTop">
+          <div class="name">🚀 Rocket Tap</div>
+          <div class="badge arc">Arcade</div>
+        </div>
+        <div class="desc">Flappy-style rocket. Tap to fly. Survive as long as you can.</div>
+      </a>
+
+      <a class="card" href="./arena-slash/">
+        <div class="cardTop">
+          <div class="name">⚔️ Arena Slash</div>
+          <div class="badge arc">Arcade</div>
+        </div>
+        <div class="desc">Click/Space to slash. Enemies rush you with different outfits. Clear waves.</div>
+      </a>
+
+      <a class="card" href="./target-frenzy/">
+        <div class="cardTop">
+          <div class="name">🎯 Target Frenzy</div>
+          <div class="badge fun">Skill</div>
+        </div>
+        <div class="desc">Click targets before time runs out. Smaller targets = more points + satisfying hits.</div>
+      </a>
+
+      <a class="card" href="./coinrush.html">
+        <div class="cardTop">
+          <div class="name">🪙 Coin Rush</div>
+          <div class="badge fun">Skill</div>
+        </div>
+        <div class="desc">Collect coins as fast as possible before time ends. Neon night theme.</div>
+      </a>
+
+      <a class="card" href="./password-challenge/">
+        <div class="cardTop">
+          <div class="name">🔐 Enzo Password Challenge</div>
+          <div class="badge new">New</div>
+        </div>
+        <div class="desc">Make a password that survives weird rules. It’s chaotic and funny (original).</div>
+      </a>
+    </div>
+
+    <footer>
+      Tip: if a game link shows 404, it means the folder/file name in GitHub doesn’t match the link.
+      <div class="smallLinks" style="margin-top:10px;">
+        Want more games added? Tell me the next theme: <a href="javascript:void(0)">neon</a> / <a href="javascript:void(0)">sky</a> / <a href="javascript:void(0)">retro</a>.
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
 
